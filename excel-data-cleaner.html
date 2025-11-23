@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title> Data Prep Utility</title>
+	<style>
+		/* Danial: Core application reset and look-and-feel */
+		body {
+			font-family: 'Inter', sans-serif;
+			margin: 0;
+			padding: 20px;
+			background-color: #f7f9fc;
+			/* Light, cool background */
+			color: #333;
+		}
+
+		h1 {
+			color: #007bff;
+			border-bottom: 2px solid #007bff;
+			padding-bottom: 10px;
+			margin-bottom: 15px;
+		}
+
+		h2 {
+			color: #495057;
+			font-size: 1.5em;
+		}
+
+		/* Main Controls Panel */
+		#controls-panel {
+			background-color: white;
+			padding: 30px;
+			border-radius: 16px;
+			box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+			margin-bottom: 30px;
+		}
+
+		.action-group {
+			margin-bottom: 30px;
+			padding: 20px;
+			border: 1px solid #e9ecef;
+			border-radius: 12px;
+			background-color: #fefefe;
+		}
+
+		/* Form & Input Styling */
+		input[type="text"],
+		input[type="file"],
+		select {
+			padding: 10px;
+			border: 1px solid #ced4da;
+			border-radius: 8px;
+			margin-right: 8px;
+			box-sizing: border-box;
+			transition: border-color 0.2s;
+			min-width: 150px;
+		}
+
+		input[type="text"]:focus,
+		select:focus {
+			border-color: #007bff;
+			box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.15);
+			outline: none;
+		}
+
+		select:not([multiple]) {
+			background-color: #fff;
+		}
+
+		/* Button Styling - More tactile */
+		button {
+			padding: 10px 18px;
+			background-color: #007bff;
+			color: white;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+			font-weight: 600;
+			text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+			margin-bottom: 5px;
+			/* For flex layout */
+		}
+
+		button:hover:not(:disabled) {
+			background-color: #0056b3;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+		}
+
+		button:disabled {
+			background-color: #adb5bd;
+			cursor: not-allowed;
+			box-shadow: none;
+			transform: none;
+		}
+
+		/* Tabs */
+		#feature-tabs {
+			display: flex;
+			margin-bottom: 0;
+			border-bottom: 2px solid #dee2e6;
+		}
+
+		.tab-btn {
+			padding: 12px 20px;
+			background-color: #f8f9fa;
+			border: none;
+			cursor: pointer;
+			font-size: 16px;
+			font-weight: 500;
+			color: #6c757d;
+			border-radius: 8px 8px 0 0;
+			margin-right: 5px;
+			transition: background-color 0.2s, color 0.2s;
+		}
+
+		.tab-btn.active {
+			background-color: white;
+			color: #007bff;
+			font-weight: 700;
+			border: 1px solid #dee2e6;
+			border-bottom: 2px solid white;
+			/* Visual trick to hide border on active tab */
+			margin-bottom: -2px;
+		}
+
+		.tab-view {
+			padding: 20px 0 10px 0;
+			border-top: none;
+		}
+
+		.is-hidden {
+			display: none;
+		}
+
+		/* Stats & Layout */
+		#data-metrics {
+			font-weight: 700;
+			margin-bottom: 20px;
+			background-color: #e3f2fd;
+			padding: 15px;
+			border-radius: 10px;
+			border: 1px solid #b3e5fc;
+			display: flex;
+			gap: 40px;
+			color: #0288d1;
+		}
+
+		.flex-row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		/* Table Styling */
+		#data-display {
+			overflow-x: auto;
+			background-color: #fff;
+			border-radius: 10px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+		}
+
+		#excel-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.9em;
+		}
+
+		#excel-table th,
+		#excel-table td {
+			border: 1px solid #dee2e6;
+			padding: 12px;
+			text-align: left;
+		}
+
+		#excel-table th {
+			background-color: #495057;
+			color: white;
+			cursor: default;
+		}
+
+		#excel-table .row-index {
+			width: 3%;
+			text-align: center;
+			font-weight: bold;
+			background-color: #f1f3f5;
+			color: #6c757d;
+			min-width: 50px;
+		}
+
+		.no-data {
+			text-align: center;
+			color: #888;
+			padding: 40px;
+			background-color: #fff;
+		}
+	</style>
+	<!-- SheetJS CDN for reading and writing Excel files -->
+	<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+	<h1>🚀 Data Preparation Utility</h1>
+	<p>Upload a spreadsheet and let's get that data cleaned up, calculated, and ready to go!</p>
+
+	<div id="controls-panel">
+		<div class="action-group" style="background-color: #eef4ff;">
+			<input type="file" id="file-input" accept=".xlsx, .xls">
+			<button onclick="handleReset()" id="reset-button" disabled style="background-color: #6c757d;">
+				🔄 Reset to Original Data
+			</button>
+		</div>
+
+		<div id="data-metrics">
+			<span id="col-count-span">Columns: 0</span>
+			<span id="row-count-span">Rows: 0</span>
+		</div>
+
+		<!-- Tab Buttons -->
+		<div id="feature-tabs">
+			<button class="tab-btn active" onclick="showTab('cleanup-tab')">🧹 Cleanup & Filtering</button>
+			<button class="tab-btn" onclick="showTab('nulls-tab')">🚫 Null Value Management</button>
+			<button class="tab-btn" onclick="showTab('calculate-tab')">🧮 Calculations</button>
+			<button class="tab-btn" onclick="showTab('export-tab')">⬇️ Export</button>
+		</div>
+
+		<!-- Tab Content -->
+
+		<!-- Cleanup & Filtering Tab -->
+		<div id="cleanup-tab" class="tab-view">
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">🔍 Live Data Filter</h2>
+				<input type="text" id="global-filter-input" placeholder="Type text to filter all records...">
+			</div>
+
+			<!-- Data Sorting -->
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">⬆️ Sort Data</h2>
+				<div class="flex-row">
+					<select id="sort-column-picker" disabled>
+						<option value="">Select Column</option>
+					</select>
+					<select id="sort-order-select-el" disabled>
+						<option value="asc">Ascending (A-Z, 0-9)</option>
+						<option value="desc">Descending (Z-A, 9-0)</option>
+					</select>
+					<button onclick="doSortData()" id="sort-data-btn" disabled style="background-color: #17a2b8;">
+						Execute Sort
+					</button>
+				</div>
+			</div>
+
+			<!-- Text Transformation -->
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">🔡 Text Formatting</h2>
+				<select id="text-transform-picker" disabled>
+					<option value="">Select Column to Transform</option>
+				</select>
+				<div class="flex-row" style="margin-top: 15px;">
+					<button onclick="applyTextTransform('uppercase')" id="case-upper-btn" disabled>
+						UPPERCASE
+					</button>
+					<button onclick="applyTextTransform('lowercase')" id="case-lower-btn" disabled>
+						lowercase
+					</button>
+					<button onclick="applyTextTransform('titlecase')" id="case-title-btn" disabled>
+						Title Case
+					</button>
+					<button onclick="applyTrimWhitespace()" id="trim-spaces-btn" disabled
+						style="background-color: #343a40;">
+						Trim Spaces
+					</button>
+				</div>
+			</div>
+
+			<!-- Email Keyword Processing -->
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">📧 Email Keyword Actions</h2>
+				<div class="flex-row" style="margin-bottom: 10px;">
+					<select id="email-column-picker" disabled>
+						<option value="">Select Email Column</option>
+					</select>
+					<input type="text" id="email-keywords-input" placeholder="Keywords (e.g., info, sales)">
+				</div>
+				<p style="font-size: small; color: #6c757d; margin-top: 5px;">Use commas to separate multiple keywords.
+				</p>
+				<div class="flex-row">
+					<button onclick="clearMatchingEmails()" id="email-clear-button" disabled
+						style="background-color: #dc3545;">
+						🗑️ Remove Matching Entry
+					</button>
+					<input type="text" id="flag-column-name" placeholder="Flag Column Name">
+					<button onclick="flagMatchingEmails()" id="email-flag-button" disabled
+						style="background-color: #ffc107; color: #333;">
+						🚩 Add Flag Column
+					</button>
+				</div>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">🚫 Delete Duplicates</h2>
+				<div class="flex-row">
+					<select id="duplicate-column-picker" disabled>
+						<option value="">Select Key Column</option>
+					</select>
+					<button onclick="removeDuplicateRows()" id="remove-dups-btn" disabled
+						style="background-color: #dc3545;">
+						Remove Duplicates
+					</button>
+				</div>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">❌ Delete Columns</h2>
+				<div class="select-list">
+					<select id="delete-cols-picker" multiple size="4" disabled></select>
+					<p style="font-size: small; color: #6c757d; margin: 5px 0;">Hold **Ctrl/Cmd** to select multiple.
+					</p>
+					<button onclick="executeColumnDeletion()" id="delete-cols-btn" disabled
+						style="background-color: #dc3545;">
+						Delete Selected Columns
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Null Value Management Tab -->
+		<div id="nulls-tab" class="tab-view is-hidden">
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">Target Selection</h2>
+				<select id="null-check-picker" disabled>
+					<option value="-1">Any Column (Check entire row)</option>
+				</select>
+				<p style="font-size: small; color: #6c757d; margin-top: 5px;">Choose a specific column or check for
+					*any* empty cell in a row.</p>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">Find & Review</h2>
+				<button onclick="findAndCountEmptyCells()" id="find-empty-btn" disabled
+					style="background-color: #6f42c1;">
+					🔍 Count Empty Rows/Cells
+				</button>
+				<span id="empty-cell-count-span" style="font-weight: bold; color: #6f42c1; margin-left: 15px;"></span>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">Fill Empty Cells</h2>
+				<div class="flex-row">
+					<input type="text" id="fill-value-input" placeholder="Value to fill with (e.g., Unknown, 0)">
+					<button onclick="fillSelectedEmptyCells()" id="fill-empty-btn" disabled
+						style="background-color: #28a745;">
+						➕ Fill Now
+					</button>
+				</div>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">Delete Rows</h2>
+				<button onclick="deleteRowsBasedOnEmptyCells()" id="delete-empty-row-btn" disabled
+					style="background-color: #dc3545;">
+					🗑️ Delete Matching Rows
+				</button>
+			</div>
+		</div>
+
+		<!-- Calculations Tab -->
+		<div id="calculate-tab" class="tab-view is-hidden">
+
+			<!-- Split Columns -->
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">✂️ Split Column by Delimiter</h2>
+				<div class="flex-row" style="margin-bottom: 10px;">
+					<select id="split-column-picker" disabled>
+						<option value="">Select Column to Split</option>
+					</select>
+					<input type="text" id="split-delimiter-input" placeholder="Delimiter (e.g., comma, |)"
+						style="width: 150px;">
+				</div>
+				<div class="flex-row">
+					<input type="text" id="new-split-names-input" placeholder="New Column Names (e.g., PartA, PartB)">
+					<button onclick="executeColumnSplit()" id="split-col-btn" disabled
+						style="background-color: #e59400;">
+						Split & Insert
+					</button>
+				</div>
+				<p style="font-size: small; color: #6c757d; margin-top: 5px;">Enter new column names separated by
+					commas.</p>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">🔗 Merge Columns</h2>
+				<div class="select-list">
+					<select id="merge-cols-picker" multiple size="4" disabled></select>
+					<p style="font-size: small; color: #6c757d; margin: 5px 0;">Select columns to join (Ctrl/Cmd click).
+					</p>
+					<div class="flex-row">
+						<input type="text" id="new-merge-name" placeholder="New Column Name">
+						<button onclick="executeColumnMerge()" id="merge-cols-btn" disabled
+							style="background-color: #007bff;">
+							Merge Columns
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="action-group">
+				<h2 style="margin-top: 0; font-size: 1.2em;">🔢 Numeric Calculation</h2>
+				<div class="flex-row">
+					<select id="calc-col-a-picker" disabled></select>
+					<select id="calc-operator-picker" disabled>
+						<option value="">Operator</option>
+						<option value="+">Add (+)</option>
+						<option value="-">Subtract (-)</option>
+						<option value="*">Multiply (*)</option>
+						<option value="/">Divide (/)</option>
+					</select>
+					<select id="calc-col-b-picker" disabled></select>
+					<span>= Into:</span>
+					<input type="text" id="calc-result-name" placeholder="Result Name">
+					<button onclick="executeColumnCalculation()" id="calc-col-btn" disabled
+						style="background-color: #28a745;">
+						Calculate
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Export Tab -->
+		<div id="export-tab" class="tab-view is-hidden">
+			<div class="action-group" style="text-align: center; background-color: #e6f7e9;">
+				<p style="font-size: 1.1em; margin-bottom: 15px;">Your filtered and cleaned data is ready for download.
+				</p>
+				<button onclick="initiateExport()" id="export-button" disabled
+					style="padding: 15px 30px; font-size: 1.1em; background-color: #28a745;">
+					⬇️ Download Processed Excel (.xlsx)
+				</button>
+				<p style="font-size: small; color: #555; margin-top: 10px;">The current view (including any active
+					filters) will be saved.</p>
+			</div>
+		</div>
+
+	</div>
+
+	<div id="data-display">
+		<p class="no-data">Please upload an Excel file (.xlsx or .xls) to begin data processing.</p>
+	</div>
+
+	<script>
+		/* Danial: Core Data Stores */
+		let _masterDataHeaders = []; // The list of column names
+		let _originalLoadedData = []; // Raw data, kept for reset purposes
+		let _workingDataSet = []; // The data array we modify and display
+		let _fileNameBase = "processed_data";
+
+		// Danial: Element references for cleaner DOM access
+		const fileInputEl = document.getElementById('file-input');
+		const globalFilterEl = document.getElementById('global-filter-input');
+		const dataDisplayEl = document.getElementById('data-display');
+		const emptyCellCountEl = document.getElementById('empty-cell-count-span');
+
+		// References to all column selectors
+		const allColumnPickers = {
+			merge: document.getElementById('merge-cols-picker'),
+			delete: document.getElementById('delete-cols-picker'),
+			duplicate: document.getElementById('duplicate-column-picker'),
+			calcA: document.getElementById('calc-col-a-picker'),
+			calcB: document.getElementById('calc-col-b-picker'),
+			email: document.getElementById('email-column-picker'),
+			nullCheck: document.getElementById('null-check-picker'),
+			transform: document.getElementById('text-transform-picker'),
+			sort: document.getElementById('sort-column-picker'),
+			split: document.getElementById('split-column-picker')
+		};
+
+		// --- UI & Utility Functions ---
+
+		/**
+		 * Danial: Toggles the visibility of feature tabs.
+		 */
+		function showTab(tabId) {
+			const contents = document.getElementsByClassName('tab-view');
+			const buttons = document.getElementsByClassName('tab-btn');
+
+			for (let c of contents) { c.classList.add('is-hidden'); }
+			for (let b of buttons) { b.classList.remove('active'); }
+
+			document.getElementById(tabId).classList.remove('is-hidden');
+			document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
+		}
+
+		/**
+		 * Danial: Populates all column selection dropdowns in the UI.
+		 */
+		function populateAllSelectors() {
+			const headerCount = _masterDataHeaders.length;
+			const hasData = headerCount > 0;
+
+			Object.values(allColumnPickers).forEach(selectEl => {
+				const isMulti = selectEl.hasAttribute('multiple');
+				selectEl.innerHTML = ''; // Clear previous options
+
+				if (selectEl.id === 'null-check-picker') {
+					selectEl.add(new Option('Any Column (Check entire row)', '-1'));
+				} else if (!isMulti) {
+					selectEl.add(new Option(`Select Column`, ''));
+				}
+
+				_masterDataHeaders.forEach((header, index) => {
+					selectEl.add(new Option(header, index));
+				});
+				selectEl.disabled = !hasData;
+			});
+
+			// Enable/disable key action buttons (Danial: keep UI clean)
+			const buttonsToToggle = ['reset-button', 'export-button', 'sort-data-btn', 'trim-spaces-btn', 'merge-cols-btn', 'calc-col-btn', 'split-col-btn', 'remove-dups-btn', 'delete-cols-btn', 'email-clear-button', 'email-flag-button', 'find-empty-btn', 'fill-empty-btn', 'delete-empty-row-btn'];
+			buttonsToToggle.forEach(id => {
+				const btn = document.getElementById(id);
+				if (btn) btn.disabled = !hasData;
+			});
+
+			document.getElementById('calc-operator-picker').disabled = !hasData;
+			document.getElementById('sort-order-select-el').disabled = !hasData;
+		}
+
+		/**
+		 * Danial: Updates the row and column count metrics.
+		 */
+		function updateMetrics() {
+			const colCount = _masterDataHeaders.length;
+			const totalRowCount = _workingDataSet.length;
+			document.getElementById('col-count-span').textContent = `Columns: ${colCount}`;
+			document.getElementById('row-count-span').textContent = `Rows: ${totalRowCount}`;
+
+			if (globalFilterEl.value.trim()) {
+				const filteredRows = getFilteredData().length;
+				document.getElementById('row-count-span').textContent += ` (Filtered: ${filteredRows})`;
+			}
+		}
+
+		/**
+		 * Checks if a cell value is effectively empty (null, undefined, or empty string after trimming).
+		 */
+		function isCellEmpty(value) {
+			// Danial: Ensure null is treated the same as an empty string
+			return value === undefined || value === null || String(value).trim() === '';
+		}
+
+		// --- Data Filtering & Rendering ---
+
+		/**
+		 * Retrieves the data set after applying the global filter.
+		 */
+		function getFilteredData() {
+			const filterText = globalFilterEl.value.toLowerCase().trim();
+			if (!filterText) {
+				return _workingDataSet;
+			}
+
+			return _workingDataSet.filter(row => {
+				return row.some(cell => {
+					if (isCellEmpty(cell)) return false;
+					return String(cell).toLowerCase().includes(filterText);
+				});
+			});
+		}
+
+		/**
+		 * Renders the current working data set to the HTML table.
+		 */
+		function renderTable() {
+			const dataToDisplay = getFilteredData();
+
+			if (_masterDataHeaders.length === 0) {
+				dataDisplayEl.innerHTML = '<p class="no-data">No data available to display.</p>';
+				updateMetrics();
+				return;
+			}
+
+			let html = '<table id="excel-table"><thead><tr>';
+			html += '<th class="row-index">S. No.</th>';
+
+			_masterDataHeaders.forEach(header => {
+				html += `<th>${header}</th>`;
+			});
+			html += '</tr></thead><tbody>';
+
+			dataToDisplay.forEach((row, index) => {
+				html += '<tr>';
+				html += `<td class="row-index">${index + 1}</td>`;
+
+				// Danial: Ensure we iterate up to the number of current headers
+				for (let i = 0; i < _masterDataHeaders.length; i++) {
+					const cell = row[i];
+					const cellValue = cell !== undefined && cell !== null ? cell : '';
+					html += `<td>${cellValue}</td>`;
+				}
+				html += '</tr>';
+			});
+			html += '</tbody></table>';
+			dataDisplayEl.innerHTML = html;
+			updateMetrics();
+		}
+
+		/**
+		 * Handler for the filter input event.
+		 */
+		function handleFilterInput() {
+			// Danial: Simply re-render the table on input
+			renderTable();
+		}
+
+
+		// --- File I/O ---
+
+		/**
+		 * Handler for file upload. Reads the Excel file.
+		 */
+		function handleFileLoad(e) {
+			const files = e.target.files;
+			if (files.length === 0) return;
+
+			const file = files[0];
+			const reader = new FileReader();
+
+			_fileNameBase = file.name.replace(/\.[^/.]+$/, "") + "_processed"; // Danial: Store base file name
+
+			reader.onload = function (event) {
+				try {
+					const data = new Uint8Array(event.target.result);
+					const workbook = XLSX.read(data, { type: 'array' });
+					const sheetName = workbook.SheetNames[0];
+					const worksheet = workbook.Sheets[sheetName];
+
+					// Read sheet into array-of-arrays format
+					const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+					if (json.length > 0) {
+						_masterDataHeaders = json[0];
+						_originalLoadedData = json.slice(1);
+						// Danial: Deep clone for the working data set
+						_workingDataSet = JSON.parse(JSON.stringify(_originalLoadedData));
+						renderTable();
+					} else {
+						dataDisplayEl.innerHTML = '<p class="no-data">The sheet is empty or improperly formatted.</p>';
+						_masterDataHeaders = [];
+						_originalLoadedData = [];
+						_workingDataSet = [];
+					}
+				} catch (error) {
+					console.error("Error processing file:", error);
+					alert("Error reading file. Please ensure it is a valid .xlsx or .xls file.");
+				}
+				populateAllSelectors();
+				showTab('cleanup-tab');
+			};
+
+			reader.readAsArrayBuffer(file);
+		}
+
+		/**
+		 * Resets the working data to the original loaded data.
+		 */
+		function handleReset() {
+			// Danial: Resetting the working data and the filter
+			_workingDataSet = JSON.parse(JSON.stringify(_originalLoadedData));
+			globalFilterEl.value = '';
+			renderTable();
+			alert("Data successfully reset to the state right after file upload.");
+		}
+
+		/**
+		 * Exports the currently displayed/filtered data.
+		 */
+		function initiateExport() {
+			if (_masterDataHeaders.length === 0) {
+				alert("No data available to export.");
+				return;
+			}
+
+			let filename = prompt("Enter the filename for the exported Excel file:", _fileNameBase + ".xlsx");
+
+			if (filename === null) return;
+
+			if (!filename.toLowerCase().endsWith('.xlsx')) {
+				filename += '.xlsx';
+			}
+
+			const dataToExport = getFilteredData();
+			// Danial: Array-of-arrays format for SheetJS
+			const exportArray = [_masterDataHeaders, ...dataToExport];
+
+			const ws = XLSX.utils.aoa_to_sheet(exportArray);
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "ProcessedData");
+
+			XLSX.writeFile(wb, filename);
+		}
+
+		// --- Feature Implementations ---
+
+		/**
+		 * Danial: Implements the Data Sorting logic.
+		 */
+		function doSortData() {
+			const colIndex = parseInt(allColumnPickers.sort.value);
+			const order = document.getElementById('sort-order-select-el').value;
+
+			if (isNaN(colIndex)) {
+				alert("Please select a column to sort by.");
+				return;
+			}
+
+			const headerName = _masterDataHeaders[colIndex];
+
+			_workingDataSet.sort((rowA, rowB) => {
+				let valA = rowA[colIndex];
+				let valB = rowB[colIndex];
+
+				// Null/Empty handling: Put empty values at the end for ASC, beginning for DESC
+				const emptyA = isCellEmpty(valA);
+				const emptyB = isCellEmpty(valB);
+
+				if (emptyA && emptyB) return 0;
+				if (emptyA) return order === 'asc' ? 1 : -1;
+				if (emptyB) return order === 'asc' ? -1 : 1;
+
+				let comparison = 0;
+
+				// Attempt numeric comparison first
+				let numA = parseFloat(valA);
+				let numB = parseFloat(valB);
+
+				if (!isNaN(numA) && !isNaN(numB)) {
+					comparison = numA - numB;
+				} else {
+					// String comparison (case-insensitive)
+					let strA = String(valA).toLowerCase();
+					let strB = String(valB).toLowerCase();
+					if (strA < strB) comparison = -1;
+					if (strA > strB) comparison = 1;
+				}
+
+				return order === 'asc' ? comparison : -comparison;
+			});
+
+			renderTable();
+			alert(`Data successfully sorted by "${headerName}" in ${order.toUpperCase()} order.`);
+		}
+
+		/**
+		 * Implements text transformation (case change)
+		 */
+		function applyTextTransform(caseType) {
+			const colIndex = parseInt(allColumnPickers.transform.value);
+
+			if (isNaN(colIndex) || colIndex === -1) {
+				alert("Please select a column for text transformation.");
+				return;
+			}
+
+			let transformedCount = 0;
+
+			_workingDataSet = _workingDataSet.map(row => {
+				let cellValue = row[colIndex];
+				if (isCellEmpty(cellValue)) return row;
+
+				cellValue = String(cellValue);
+				let newCellValue;
+
+				switch (caseType) {
+					case 'uppercase':
+						newCellValue = cellValue.toUpperCase();
+						break;
+					case 'lowercase':
+						newCellValue = cellValue.toLowerCase();
+						break;
+					case 'titlecase':
+						newCellValue = cellValue.toLowerCase().split(' ').map(word => {
+							if (word.length === 0) return '';
+							// Danial: Simple title case logic, handles spaces gracefully
+							return word.charAt(0).toUpperCase() + word.slice(1);
+						}).join(' ');
+						break;
+					default:
+						return row;
+				}
+
+				if (newCellValue !== cellValue) {
+					row[colIndex] = newCellValue;
+					transformedCount++;
+				}
+				return row;
+			});
+
+			renderTable();
+			alert(`Completed: ${transformedCount} cell(s) in column "${_masterDataHeaders[colIndex]}" converted to ${caseType}.`);
+		}
+
+		/**
+		 * Implements whitespace trimming.
+		 */
+		function applyTrimWhitespace() {
+			const colIndex = parseInt(allColumnPickers.transform.value);
+
+			if (isNaN(colIndex) || colIndex === -1) {
+				alert("Please select a column to trim.");
+				return;
+			}
+
+			let trimmedCount = 0;
+
+			_workingDataSet = _workingDataSet.map(row => {
+				let cellValue = row[colIndex];
+				if (isCellEmpty(cellValue)) return row;
+
+				const originalValue = String(cellValue);
+				const trimmedValue = originalValue.trim();
+
+				if (trimmedValue !== originalValue) {
+					row[colIndex] = trimmedValue;
+					trimmedCount++;
+				}
+				return row;
+			});
+
+			renderTable();
+			if (trimmedCount === 0) {
+				alert("No cells required trimming.");
+			} else {
+				alert(`Successfully trimmed whitespace from ${trimmedCount} cell(s) in column "${_masterDataHeaders[colIndex]}".`);
+			}
+		}
+
+		/**
+		 * Removes specific email entries based on keywords.
+		 */
+		function clearMatchingEmails() {
+			const keyIndex = parseInt(allColumnPickers.email.value);
+			const keywordsInput = document.getElementById('email-keywords-input').value.trim();
+
+			if (isNaN(keyIndex)) { alert("Select the email column."); return; }
+			if (!keywordsInput) { alert("Enter keywords (comma-separated)."); return; }
+
+			const keywords = keywordsInput.toLowerCase().split(',').map(k => k.trim()).filter(k => k.length > 0);
+			let clearedCount = 0;
+			const delimiterRegex = /[,;\s]+/;
+
+			_workingDataSet = _workingDataSet.map(row => {
+				const fullCellContent = String(row[keyIndex] || '');
+				let emailList = fullCellContent.split(delimiterRegex).filter(e => e.trim() !== '');
+
+				const filteredEmails = emailList.filter(email => {
+					const emailLower = email.toLowerCase();
+					const matchesKeyword = keywords.some(keyword => emailLower.includes(keyword));
+
+					if (matchesKeyword) {
+						clearedCount++;
+						return false;
+					}
+					return true;
+				});
+
+				row[keyIndex] = filteredEmails.join(', ');
+				return row;
+			});
+
+			renderTable();
+			alert(`Removed ${clearedCount} specific email entries containing keywords: ${keywordsInput}.`);
+		}
+
+		/**
+		 * Adds a flag column based on email keywords.
+		 */
+		function flagMatchingEmails() {
+			const keyIndex = parseInt(allColumnPickers.email.value);
+			const keywordsInput = document.getElementById('email-keywords-input').value.trim();
+			const flagNameInput = document.getElementById('flag-column-name').value.trim() || "Keyword Flag";
+
+			if (isNaN(keyIndex)) { alert("Select the email column."); return; }
+			if (!keywordsInput) { alert("Enter keywords."); return; }
+
+			const keywords = keywordsInput.toLowerCase().split(',').map(k => k.trim()).filter(k => k.length > 0);
+			let flaggedCount = 0;
+			const flagColumnHeader = flagNameInput;
+
+			// Danial: Remove existing flag column if header is the same
+			const existingIndex = _masterDataHeaders.findIndex(header => header.trim() === flagColumnHeader.trim());
+			if (existingIndex !== -1) {
+				_masterDataHeaders.splice(existingIndex, 1);
+				_workingDataSet.forEach(row => row.splice(existingIndex, 1));
+			}
+
+			_masterDataHeaders.push(flagColumnHeader);
+
+			_workingDataSet = _workingDataSet.map(row => {
+				const cellValue = String(row[keyIndex] || '').toLowerCase();
+				const matchesKeyword = keywords.some(keyword => cellValue.includes(keyword));
+
+				if (matchesKeyword) {
+					row.push(flagNameInput);
+					flaggedCount++;
+				} else {
+					row.push('');
+				}
+				return row;
+			});
+
+			populateAllSelectors();
+			renderTable();
+			alert(`Added column "${flagColumnHeader}" and flagged ${flaggedCount} rows.`);
+		}
+
+		/**
+		 * Finds and displays the count of empty cells.
+		 */
+		function findAndCountEmptyCells() {
+			const colIndex = parseInt(allColumnPickers.nullCheck.value);
+			let emptyCount = 0;
+
+			_workingDataSet.forEach(row => {
+				let isEmptyRow = false;
+				if (colIndex === -1) {
+					if (row.some(isCellEmpty)) { isEmptyRow = true; }
+				} else {
+					if (isCellEmpty(row[colIndex])) { isEmptyRow = true; }
+				}
+				if (isEmptyRow) { emptyCount++; }
+			});
+
+			emptyCellCountEl.textContent = `Found ${emptyCount} row(s) with empty cells matching criteria.`;
+			alert(`Found ${emptyCount} row(s) with empty cells based on your selection.`);
+		}
+
+		/**
+		 * Fills all empty cells with a user-specified value.
+		 */
+		function fillSelectedEmptyCells() {
+			const colIndex = parseInt(allColumnPickers.nullCheck.value);
+			const fillValue = document.getElementById('fill-value-input').value.trim();
+
+			if (!fillValue) { alert("Enter a value to fill with."); return; }
+
+			let filledCount = 0;
+			const numColumns = _masterDataHeaders.length;
+
+			_workingDataSet = _workingDataSet.map(row => {
+				if (colIndex === -1) {
+					// Fill empty cells across all columns
+					for (let i = 0; i < numColumns; i++) {
+						if (isCellEmpty(row[i])) {
+							row[i] = fillValue;
+							filledCount++;
+						}
+					}
+				} else {
+					// Fill empty cells only in the selected column
+					if (isCellEmpty(row[colIndex])) {
+						row[colIndex] = fillValue;
+						filledCount++;
+					}
+				}
+				return row;
+			});
+
+			renderTable();
+			if (filledCount === 0) {
+				alert("No empty cells found to fill.");
+			} else {
+				alert(`Successfully filled ${filledCount} empty cell(s) with: "${fillValue}".`);
+			}
+		}
+
+		/**
+		 * Deletes entire rows that contain an empty cell based on the selected criteria.
+		 */
+		function deleteRowsBasedOnEmptyCells() {
+			const colIndex = parseInt(allColumnPickers.nullCheck.value);
+			let deletedCount = 0;
+
+			const newProcessedData = _workingDataSet.filter(row => {
+				let shouldKeepRow = true;
+
+				if (colIndex === -1) {
+					if (row.some(isCellEmpty)) { shouldKeepRow = false; }
+				} else {
+					if (isCellEmpty(row[colIndex])) { shouldKeepRow = false; }
+				}
+
+				if (!shouldKeepRow) { deletedCount++; }
+				return shouldKeepRow;
+			});
+
+			if (deletedCount === 0) {
+				alert("No rows found with empty cells to delete.");
+				return;
+			}
+
+			_workingDataSet = newProcessedData;
+			renderTable();
+			alert(`Deleted ${deletedCount} row(s) containing empty cells.`);
+		}
+
+		/**
+		 * Splits the selected column's content by a delimiter.
+		 */
+		function executeColumnSplit() {
+			const colIndex = parseInt(allColumnPickers.split.value);
+			const delimiter = document.getElementById('split-delimiter-input').value;
+			const newNamesInput = document.getElementById('new-split-names-input').value.trim();
+
+			if (isNaN(colIndex)) { alert("Select column to split."); return; }
+			if (!delimiter) { alert("Enter a delimiter."); return; }
+			if (!newNamesInput) { alert("Enter names for new columns."); return; }
+
+			const newHeaders = newNamesInput.split(',').map(name => name.trim()).filter(name => name.length > 0);
+			if (newHeaders.length === 0) { alert("Enter valid new column names."); return; }
+
+			// Danial: Index where new columns will be inserted
+			const insertIndex = colIndex + 1;
+
+			_masterDataHeaders.splice(insertIndex, 0, ...newHeaders);
+
+			let splitCount = 0;
+
+			_workingDataSet = _workingDataSet.map(row => {
+				const cellValue = String(row[colIndex] || '');
+				const parts = cellValue.split(delimiter).map(p => p.trim());
+
+				const newValues = [];
+				for (let i = 0; i < newHeaders.length; i++) {
+					// Danial: Use empty string if a split part doesn't exist
+					newValues.push(parts[i] || '');
+				}
+
+				row.splice(insertIndex, 0, ...newValues);
+
+				if (parts.length > 1 && cellValue !== '') {
+					splitCount++;
+				}
+
+				return row;
+			});
+
+			populateAllSelectors();
+			renderTable();
+			alert(`Successfully split column "${_masterDataHeaders[insertIndex + newHeaders.length - 1]}" into ${newHeaders.length} new column(s). Rows affected: ${splitCount}.`);
+		}
+
+		/**
+		 * Merges selected columns into a new one.
+		 */
+		function executeColumnMerge() {
+			const selectedOptions = Array.from(allColumnPickers.merge.selectedOptions);
+			const colIndexes = selectedOptions.map(option => parseInt(option.value));
+			const newName = document.getElementById('new-merge-name').value.trim() || "Merged Data";
+
+			if (colIndexes.length < 2) { alert("Select at least two columns."); return; }
+			if (!newName) { alert("Enter a new column name."); return; }
+
+			_masterDataHeaders.push(newName);
+			_workingDataSet = _workingDataSet.map(row => {
+				const mergedValue = colIndexes
+					.map(index => row[index] !== undefined && row[index] !== null ? String(row[index]) : '')
+					.join(' | '); // Danial: Using pipe for separation
+				row.push(mergedValue);
+				return row;
+			});
+
+			populateAllSelectors();
+			renderTable();
+			alert(`Columns successfully merged into: "${newName}".`);
+		}
+
+		/**
+		 * Calculates a new column based on two numeric columns.
+		 */
+		function executeColumnCalculation() {
+			const col1Index = parseInt(allColumnPickers.calcA.value);
+			const operator = document.getElementById('calc-operator-picker').value;
+			const col2Index = parseInt(allColumnPickers.calcB.value);
+			const newName = document.getElementById('calc-result-name').value.trim() || "Calculated Result";
+
+			if (isNaN(col1Index) || isNaN(col2Index) || !operator || !newName) {
+				alert("Please complete all calculation inputs.");
+				return;
+			}
+
+			_masterDataHeaders.push(newName);
+
+			_workingDataSet = _workingDataSet.map(row => {
+				const val1 = parseFloat(row[col1Index]) || 0;
+				const val2 = parseFloat(row[col2Index]) || 0;
+				let result;
+
+				switch (operator) {
+					case '+': result = val1 + val2; break;
+					case '-': result = val1 - val2; break;
+					case '*': result = val1 * val2; break;
+					case '/':
+						result = val2 !== 0 ? val1 / val2 : 'Div/0';
+						break;
+					default: result = NaN;
+				}
+
+				// Danial: Rounding to 2 decimal places for clean display
+				row.push(typeof result === 'number' && !isNaN(result) ? parseFloat(result.toFixed(2)) : result);
+				return row;
+			});
+
+			populateAllSelectors();
+			renderTable();
+			alert(`New column created: "${newName}".`);
+		}
+
+		/**
+		 * Deletes selected columns.
+		 */
+		function executeColumnDeletion() {
+			const selectedOptions = Array.from(allColumnPickers.delete.selectedOptions);
+			// Danial: Sort descending so indices don't shift during deletion
+			const indexesToDelete = selectedOptions.map(option => parseInt(option.value)).sort((a, b) => b - a);
+
+			if (indexesToDelete.length === 0) { alert("Select columns to delete."); return; }
+
+			const deletedNames = indexesToDelete.map(i => _masterDataHeaders[i]);
+
+			indexesToDelete.forEach(index => { _masterDataHeaders.splice(index, 1); });
+			_workingDataSet = _workingDataSet.map(row => {
+				indexesToDelete.forEach(index => { row.splice(index, 1); });
+				return row;
+			});
+
+			populateAllSelectors();
+			renderTable();
+			alert(`Deleted columns: ${deletedNames.join(', ')}.`);
+		}
+
+		/**
+		 * Deletes duplicate rows based on a key column.
+		 */
+		function removeDuplicateRows() {
+			const keyIndex = parseInt(allColumnPickers.duplicate.value);
+
+			if (isNaN(keyIndex)) { alert("Select a column to check for duplicates."); return; }
+
+			const seenKeys = new Set();
+			const uniqueData = [];
+			let duplicatesCount = 0;
+
+			_workingDataSet.forEach(row => {
+				const keyValue = row[keyIndex];
+				// Danial: Only count non-empty values as keys
+				if (!isCellEmpty(keyValue) && !seenKeys.has(keyValue)) {
+					seenKeys.add(keyValue);
+					uniqueData.push(row);
+				} else if (!isCellEmpty(keyValue)) {
+					duplicatesCount++;
+				}
+			});
+
+			if (duplicatesCount === 0) {
+				alert("No duplicate records found.");
+				return;
+			}
+
+			_workingDataSet = uniqueData;
+			renderTable();
+			alert(`Deleted ${duplicatesCount} duplicate record(s) based on column "${_masterDataHeaders[keyIndex]}".`);
+		}
+
+
+		// --- Event Listeners and Initialization ---
+
+		fileInputEl.addEventListener('change', handleFileLoad, false);
+		globalFilterEl.addEventListener('input', handleFilterInput);
+
+		// Danial: Initial view setup
+		updateMetrics();
+		showTab('cleanup-tab'); 
+	</script>
+
+</body>
+
+</html>
